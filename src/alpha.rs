@@ -5,11 +5,11 @@ use crate::ast::{Expr, Variable};
 #[derive(Debug, Clone, PartialEq)]
 enum AlphaConvMap {
     Nil,
-    Cons(String, u32, Box<AlphaConvMap>),
+    Cons(String, usize, Box<AlphaConvMap>),
 }
 
 impl AlphaConvMap {
-    fn search(&self, value: &str) -> Option<u32> {
+    fn search(&self, value: &str) -> Option<usize> {
         match self {
             AlphaConvMap::Nil => None,
             AlphaConvMap::Cons(name, id, env) => {
@@ -26,7 +26,7 @@ impl AlphaConvMap {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AlphaConvEnv {
     map: AlphaConvMap,
-    id: Rc<RefCell<u32>>,
+    id: Rc<RefCell<usize>>,
 }
 
 impl AlphaConvEnv {
@@ -37,11 +37,11 @@ impl AlphaConvEnv {
         }
     }
 
-    pub fn id(&self) -> u32 {
+    pub fn id(&self) -> usize {
         *self.id.borrow()
     }
 
-    fn get_new_id(&self) -> u32 {
+    fn get_new_id(&self) -> usize {
         let new_id = *self.id.borrow();
         *self.id.borrow_mut() += 1;
         new_id
@@ -59,16 +59,19 @@ impl AlphaConvEnv {
         match expr {
             Expr::Var(var) => {
                 let id = self.map.search(&var.name)?;
-                Some(Expr::Var(Variable {
-                    name: var.name,
-                    id: Some(id),
-                }))
+                Some(Expr::Var(Variable { name: var.name, id }))
             }
             Expr::Abs(var, expr) => {
                 let new_alpha_conv_env = self.add_variable(var.name.clone());
                 let id = new_alpha_conv_env.map.search(&var.name);
                 let expr = new_alpha_conv_env.alpha_conversion(*expr)?;
-                Some(Expr::Abs(Variable { name: var.name, id }, Box::new(expr)))
+                Some(Expr::Abs(
+                    Variable {
+                        name: var.name,
+                        id: id?,
+                    },
+                    Box::new(expr),
+                ))
             }
             Expr::App(expr1, expr2) => {
                 let expr1 = self.alpha_conversion(*expr1)?;

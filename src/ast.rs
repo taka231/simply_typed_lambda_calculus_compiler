@@ -20,14 +20,11 @@ pub enum Operator {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Variable {
     pub name: String,
-    pub id: Option<u32>,
+    pub id: usize,
 }
 
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.id {
-            Some(id) => write!(f, "{}_{}", self.name, id),
-            None => write!(f, "{}", self.name),
-        }
+        write!(f, "{}_{}", self.name, self.id)
     }
 }

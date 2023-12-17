@@ -48,7 +48,7 @@ impl fmt::Display for ANF {
                 write!(f, "{})", args[args.len() - 1])?;
             }
             ANF::BOp(var, op, val1, val2) => {
-                write!(f, "{}_{} = ", var.name, var.id.unwrap())?;
+                write!(f, "{}_{} = ", var.name, var.id)?;
                 match op {
                     Operator::Add => write!(f, "{} + {}", val1, val2)?,
                     Operator::Sub => write!(f, "{} - {}", val1, val2)?,
@@ -64,7 +64,7 @@ impl fmt::Display for ANF {
                 write!(f, "{})", tuple[tuple.len() - 1])?;
             }
             ANF::Project(var, tuple, index) => {
-                write!(f, "{}_{} = {}[{}]", var.name, var.id.unwrap(), tuple, index)?;
+                write!(f, "{}_{} = {}[{}]", var.name, var.id, tuple, index)?;
             }
         }
         Ok(())
@@ -75,30 +75,31 @@ impl fmt::Display for ANF {
 pub struct ANFs {
     pub anfs: Vec<ANF>,
     pub value: Option<Value>,
+    pub level: usize,
 }
 
 impl ANFs {
-    fn free_vars(&self, bound_vars: &mut HashSet<u32>) -> Vec<Variable> {
+    fn free_vars(&self, bound_vars: &mut HashSet<usize>) -> Vec<Variable> {
         let mut free_vars = Vec::new();
         for anf in &self.anfs {
             match anf {
                 ANF::Fun(var, args, body) => {
-                    bound_vars.insert(var.id.unwrap());
+                    bound_vars.insert(var.id);
                     for arg in args {
-                        bound_vars.insert(arg.id.unwrap());
+                        bound_vars.insert(arg.id);
                     }
                     let mut body_free_vars = body.free_vars(bound_vars);
                     free_vars.append(&mut body_free_vars);
                 }
                 ANF::App(var1, var2, args) => {
-                    bound_vars.insert(var1.id.unwrap());
-                    if !bound_vars.contains(&var2.id.unwrap()) {
+                    bound_vars.insert(var1.id);
+                    if !bound_vars.contains(&var2.id) {
                         free_vars.push(var2.clone());
                     }
                     for arg in args {
                         match arg {
                             Value::Var(var) => {
-                                if !bound_vars.contains(&var.id.unwrap()) {
+                                if !bound_vars.contains(&var.id) {
                                     free_vars.push(var.clone());
                                 }
                             }
@@ -107,10 +108,10 @@ impl ANFs {
                     }
                 }
                 ANF::BOp(var, _, val1, val2) => {
-                    bound_vars.insert(var.id.unwrap());
+                    bound_vars.insert(var.id);
                     match val1 {
                         Value::Var(var) => {
-                            if !bound_vars.contains(&var.id.unwrap()) {
+                            if !bound_vars.contains(&var.id) {
                                 free_vars.push(var.clone());
                             }
                         }
@@ -118,7 +119,7 @@ impl ANFs {
                     }
                     match val2 {
                         Value::Var(var) => {
-                            if !bound_vars.contains(&var.id.unwrap()) {
+                            if !bound_vars.contains(&var.id) {
                                 free_vars.push(var.clone());
                             }
                         }
@@ -132,7 +133,7 @@ impl ANFs {
         if let Some(value) = &self.value {
             match value {
                 Value::Var(var) => {
-                    if !bound_vars.contains(&var.id.unwrap()) {
+                    if !bound_vars.contains(&var.id) {
                         free_vars.push(var.clone());
                     }
                 }
@@ -149,7 +150,13 @@ impl fmt::Display for ANFs {
             write!(f, "\n")?;
         }
         for anf in &self.anfs {
+            for _ in 0..self.level {
+                write!(f, "  ")?;
+            }
             write!(f, "let {} in\n", anf)?;
+        }
+        for _ in 0..self.level {
+            write!(f, "  ")?;
         }
         match &self.value {
             Some(val) => write!(f, "{}", val)?,
@@ -161,18 +168,18 @@ impl fmt::Display for ANFs {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ANFConverter {
-    pub next_var: u32,
+    pub next_var: usize,
 }
 
 impl ANFConverter {
-    pub fn new(next_var: u32) -> Self {
+    pub fn new(next_var: usize) -> Self {
         Self { next_var }
     }
 
     fn fresh_var(&mut self, name: &str) -> Variable {
         let var = Variable {
             name: name.to_owned(),
-            id: Some(self.next_var),
+            id: self.next_var,
         };
         self.next_var += 1;
         var
@@ -188,6 +195,7 @@ impl ANFConverter {
                 let mut anf = ANFs {
                     anfs: Vec::new(),
                     value: None,
+                    level: anfs.level + 1,
                 };
                 self.convert(*expr, &mut anf);
                 anfs.anfs.push(ANF::Fun(f.clone(), vec![var], anf));
@@ -227,6 +235,7 @@ impl ANFConverter {
         let mut new_anfs = ANFs {
             anfs: Vec::new(),
             value: None,
+            level: anfs.level,
         };
         for anf in anfs.anfs {
             match anf {
@@ -234,7 +243,7 @@ impl ANFConverter {
                     let env_var = self.fresh_var("env");
                     let new_funname = self.fresh_var(&var.name);
                     let free_vars =
-                        funbody_anfs.free_vars(&mut args.iter().map(|x| x.id.unwrap()).collect());
+                        funbody_anfs.free_vars(&mut args.iter().map(|x| x.id).collect());
                     let mut funbody_anfs = self.closure_conversion(funbody_anfs);
                     for i in 0..free_vars.len() {
                         funbody_anfs.anfs.insert(

@@ -5,13 +5,14 @@ use SimplyTypedLambdaCalculusCompiler::{
 };
 
 fn main() {
-    let ast = expr_parser::expr(r#"(\x. \y. x + y) 2 3"#).unwrap();
+    let ast = expr_parser::expr(r#"(\f. \x. f x) ((\x. \y. x + y) 2) 3"#).unwrap();
     let alpha_conv_env = AlphaConvEnv::new();
     let ast = alpha_conv_env.alpha_conversion(ast).unwrap();
     let mut anfconverter = ANFConverter::new(alpha_conv_env.id());
     let mut anfs = ANFs {
         anfs: Vec::new(),
         value: None,
+        level: 0,
     };
     anfconverter.convert(ast, &mut anfs);
     let anfs = anfconverter.closure_conversion(anfs);
