@@ -1,6 +1,6 @@
 use SimplyTypedLambdaCalculusCompiler::{
     alpha::AlphaConvEnv,
-    anf::{ANFConverter, ANFs},
+    anf::{ANFConverter, ANFs, HoistedANFs},
     parser::expr_parser,
     typeinfer::TypeInfer,
 };
@@ -20,5 +20,14 @@ fn main() {
     };
     anfconverter.convert(ast, &mut anfs);
     let anfs = anfconverter.closure_conversion(anfs);
-    println!("{}", anfs);
+    let mut hoisted_anfs = HoistedANFs {
+        fun_defs: Vec::new(),
+        main: ANFs {
+            anfs: Vec::new(),
+            value: None,
+            level: 1,
+        },
+    };
+    anfconverter.hoisting(anfs, &mut hoisted_anfs);
+    println!("{}", hoisted_anfs);
 }

@@ -167,6 +167,25 @@ impl fmt::Display for ANFs {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct HoistedANFs {
+    pub fun_defs: Vec<(Variable, Vec<Variable>, ANFs)>,
+    pub main: ANFs,
+}
+
+impl fmt::Display for HoistedANFs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (var, args, body) in &self.fun_defs {
+            write!(f, "let {}(", var)?;
+            for i in 0..args.len() - 1 {
+                write!(f, "{}, ", args[i])?;
+            }
+            write!(f, "{}) ={}\n\n", args[args.len() - 1], body)?;
+        }
+        write!(f, "let main() ={}", self.main)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ANFConverter {
     pub next_var: usize,
 }
@@ -275,5 +294,35 @@ impl ANFConverter {
         }
         new_anfs.value = anfs.value;
         new_anfs
+    }
+
+    pub fn hoisting(&mut self, anfs: ANFs, hoisted_anfs: &mut HoistedANFs) {
+        for anf in anfs.anfs {
+            match anf {
+                ANF::Fun(var, args, body) => {
+                    self.hoisting(body.clone(), hoisted_anfs);
+                    hoisted_anfs.fun_defs.push((
+                        var,
+                        args,
+                        ANFs {
+                            anfs: body
+                                .anfs
+                                .into_iter()
+                                .filter(|anf| !matches!(anf, ANF::Fun(_, _, _)))
+                                .collect(),
+                            value: body.value,
+                            level: 1,
+                        },
+                    ));
+                }
+                _ if anfs.level == 0 => {
+                    hoisted_anfs.main.anfs.push(anf);
+                }
+                _ => continue,
+            }
+        }
+        if anfs.level == 0 {
+            hoisted_anfs.main.value = anfs.value;
+        }
     }
 }
