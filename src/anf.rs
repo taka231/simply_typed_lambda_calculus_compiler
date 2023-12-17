@@ -1,10 +1,7 @@
 use core::fmt;
 use std::collections::HashSet;
 
-use crate::{
-    ast::{Expr, Operator, Variable},
-    typeinfer::Type,
-};
+use crate::ast::{Expr, Operator, Variable};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
@@ -165,12 +162,11 @@ impl fmt::Display for ANFs {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ANFConverter {
     pub next_var: u32,
-    pub type_env: Vec<Type>,
 }
 
 impl ANFConverter {
-    pub fn new(next_var: u32, type_env: Vec<Type>) -> Self {
-        Self { next_var, type_env }
+    pub fn new(next_var: u32) -> Self {
+        Self { next_var }
     }
 
     fn fresh_var(&mut self, name: &str) -> Variable {
@@ -183,14 +179,12 @@ impl ANFConverter {
     }
 
     pub fn convert(&mut self, expr: Expr, anfs: &mut ANFs) {
-        let t = Type::get_type(&self.type_env, &expr).unwrap();
         match expr {
             Expr::Var(var) => {
                 anfs.value = Some(Value::Var(var));
             }
             Expr::Abs(var, expr) => {
                 let f = self.fresh_var("f");
-                self.type_env.push(t);
                 let mut anf = ANFs {
                     anfs: Vec::new(),
                     value: None,
@@ -207,7 +201,6 @@ impl ANFConverter {
                 match f {
                     Some(Value::Var(f)) => {
                         let y = self.fresh_var("y");
-                        self.type_env.push(t);
                         anfs.anfs.push(ANF::App(y.clone(), f, vec![x.unwrap()]));
                         anfs.value = Some(Value::Var(y));
                     }
@@ -223,7 +216,6 @@ impl ANFConverter {
                 self.convert(*expr2, anfs);
                 let y = anfs.value.clone();
                 let z = self.fresh_var("z");
-                self.type_env.push(t);
                 anfs.anfs
                     .push(ANF::BOp(z.clone(), op, x.unwrap(), y.unwrap()));
                 anfs.value = Some(Value::Var(z));
@@ -240,20 +232,9 @@ impl ANFConverter {
             match anf {
                 ANF::Fun(var, args, funbody_anfs) => {
                     let env_var = self.fresh_var("env");
-                    let fun_type = self.type_env[var.id.unwrap() as usize].simplify();
-                    let mut env_var_type = vec![fun_type.clone()];
                     let new_funname = self.fresh_var(&var.name);
                     let free_vars =
                         funbody_anfs.free_vars(&mut args.iter().map(|x| x.id.unwrap()).collect());
-                    for free_var in &free_vars {
-                        env_var_type.push(self.type_env[free_var.id.unwrap() as usize].clone());
-                    }
-                    self.type_env.push(Type::Tuple(env_var_type.clone()));
-                    self.type_env.push(Type::Arrow(
-                        Box::new(Type::Tuple(env_var_type.clone())),
-                        Box::new(fun_type),
-                    ));
-                    self.type_env[var.id.unwrap() as usize] = Type::Tuple(env_var_type);
                     let mut funbody_anfs = self.closure_conversion(funbody_anfs);
                     for i in 0..free_vars.len() {
                         funbody_anfs.anfs.insert(
@@ -273,10 +254,6 @@ impl ANFConverter {
                 }
                 ANF::App(var, func_var, args) => {
                     let ptr = self.fresh_var(&func_var.name);
-                    match dbg!(self.type_env.get(func_var.id.unwrap() as usize)) {
-                        Some(Type::Tuple(t)) => self.type_env.push(t[0].clone()),
-                        _ => unreachable!(),
-                    }
                     new_anfs
                         .anfs
                         .push(ANF::Project(ptr.clone(), func_var.clone(), 0));
