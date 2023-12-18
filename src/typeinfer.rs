@@ -5,7 +5,6 @@ use crate::ast::Expr;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Int,
-    Bool,
     Arrow(Box<Type>, Box<Type>),
     TVar(usize, Rc<RefCell<Option<Type>>>),
 }
@@ -63,7 +62,6 @@ impl TypeInfer {
         let t2 = t2.simplify();
         match (t1, t2) {
             (Type::Int, Type::Int) => true,
-            (Type::Bool, Type::Bool) => true,
             (Type::Arrow(t11, t12), Type::Arrow(t21, t22)) => {
                 self.unify(&t11, &t21) && self.unify(&t12, &t22)
             }
