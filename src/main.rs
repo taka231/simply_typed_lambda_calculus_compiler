@@ -11,6 +11,11 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "simply_typed_lambda_calculus_compiler")]
 struct Opt {
+    #[structopt(long)]
+    ast: bool,
+
+    #[structopt(long)]
+    alpha: bool,
     /// show result type
     #[structopt(short, long = "type")]
     type_: bool,
@@ -36,6 +41,8 @@ struct Opt {
 
 fn main() {
     let Opt {
+        ast: _ast,
+        alpha,
         type_,
         anf,
         closure,
@@ -44,8 +51,14 @@ fn main() {
         program,
     } = Opt::from_args();
     let ast = expr_parser::expr(&program).unwrap();
+    if _ast {
+        println!("ast:\n{:?}\n", &ast);
+    }
     let alpha_conv_env = AlphaConvEnv::new();
     let ast = alpha_conv_env.alpha_conversion(ast).unwrap();
+    if alpha {
+        println!("alpha converted:\n{:?}\n", &ast);
+    }
     let mut typeinfer = TypeInfer::new(alpha_conv_env.id());
     let ty = typeinfer.type_infer(&ast).unwrap();
     if type_ {
