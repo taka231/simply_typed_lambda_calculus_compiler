@@ -1,6 +1,8 @@
+use inkwell::context::Context;
 use SimplyTypedLambdaCalculusCompiler::{
     alpha::AlphaConvEnv,
     anf::{ANFConverter, ANFs, HoistedANFs},
+    compile::LLVMCompiler,
     parser::expr_parser,
     typeinfer::TypeInfer,
 };
@@ -11,7 +13,7 @@ fn main() {
     let ast = alpha_conv_env.alpha_conversion(ast).unwrap();
     let mut typeinfer = TypeInfer::new(alpha_conv_env.id());
     let ty = typeinfer.type_infer(&ast).unwrap();
-    println!("{:?}", ty.simplify());
+    // println!("{:?}", ty.simplify());
     let mut anfconverter = ANFConverter::new(alpha_conv_env.id());
     let mut anfs = ANFs {
         anfs: Vec::new(),
@@ -29,5 +31,10 @@ fn main() {
         },
     };
     anfconverter.hoisting(anfs, &mut hoisted_anfs);
-    println!("{}", hoisted_anfs);
+    let context = Context::create();
+    let builder = context.create_builder();
+    let module = context.create_module("main");
+    let llvm_compiler = LLVMCompiler::new(&context, &builder, &module);
+    llvm_compiler.compile(hoisted_anfs);
+    llvm_compiler.module.print_to_stderr();
 }

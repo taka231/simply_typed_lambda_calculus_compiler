@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 peg = "0.8.2"
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm16-0"] }
+# Adjust the LLVM version accordingly here, I just happen to use LLVM 15.
+llvm-sys-160 = { package = "llvm-sys", version = "160", features = ["prefer-static"] }
