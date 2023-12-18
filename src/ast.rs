@@ -1,17 +1,30 @@
+use core::fmt;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
     Var(Variable),
     Abs(Variable, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     Number(i64),
-    Add(Box<Expr>, Box<Expr>),
-    Sub(Box<Expr>, Box<Expr>),
-    Mul(Box<Expr>, Box<Expr>),
-    Div(Box<Expr>, Box<Expr>),
+    BOp(Operator, Box<Expr>, Box<Expr>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Operator {
+    Add,
+    Sub,
+    Mul,
+    Div,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Variable {
     pub name: String,
-    pub id: Option<usize>,
+    pub id: usize,
+}
+
+impl fmt::Display for Variable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}_{}", self.name, self.id)
+    }
 }

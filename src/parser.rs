@@ -9,14 +9,14 @@ peg::parser! {
             = _ n:$(['0'..='9']+) _ {? n.parse().map(|n| Expr::Number(n)).or(Err("number"))}
 
         rule identifier() -> Variable
-            = _ s:$(['a'..='z' | 'A'..='Z']+) _ { Variable { name: s.to_owned(), id: None } }
+            = _ s:$(['a'..='z' | 'A'..='Z']+) _ { Variable { name: s.to_owned(), id: 0 } }
 
         pub rule expr() -> Expr = precedence! {
-            x:(@) "+" y:@ { Expr::Add(Box::new(x), Box::new(y)) }
-            x:(@) "-" y:@ { Expr::Sub(Box::new(x), Box::new(y)) }
+            x:(@) "+" y:@ { Expr::BOp(Operator::Add, Box::new(x), Box::new(y)) }
+            x:(@) "-" y:@ { Expr::BOp(Operator::Sub, Box::new(x), Box::new(y)) }
             --
-            x:(@) "*" y:@ { Expr::Mul(Box::new(x), Box::new(y)) }
-            x:(@) "/" y:@ { Expr::Div(Box::new(x), Box::new(y)) }
+            x:(@) "*" y:@ { Expr::BOp(Operator::Mul, Box::new(x), Box::new(y)) }
+            x:(@) "/" y:@ { Expr::BOp(Operator::Div, Box::new(x), Box::new(y)) }
             --
             x:(@) _ y:@ { Expr::App(Box::new(x), Box::new(y)) }
             --
