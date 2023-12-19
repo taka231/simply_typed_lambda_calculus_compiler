@@ -149,19 +149,20 @@ impl<'a, 'ctx> LLVMCompiler<'a, 'ctx> {
                             .unwrap()
                     };
                     self.builder.build_store(ptr, tuple[i]).unwrap();
-                    let tuple_ptr = self
-                        .builder
-                        .build_ptr_to_int(
-                            tuple_ptr
-                                .try_as_basic_value()
-                                .unwrap_left()
-                                .into_pointer_value(),
-                            self.i64_type,
-                            "ptr",
-                        )
-                        .unwrap();
-                    env.insert(var.to_string(), tuple_ptr);
                 }
+
+                let tuple_ptr = self
+                    .builder
+                    .build_ptr_to_int(
+                        tuple_ptr
+                            .try_as_basic_value()
+                            .unwrap_left()
+                            .into_pointer_value(),
+                        self.i64_type,
+                        "ptr",
+                    )
+                    .unwrap();
+                env.insert(var.to_string(), tuple_ptr);
             }
             ANF::Project(var, tuple, index) => {
                 let tuple = env.get(&tuple.to_string()).unwrap().clone();
