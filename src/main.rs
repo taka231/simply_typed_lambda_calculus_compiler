@@ -5,6 +5,7 @@ use simply_typed_lambda_calculus_compiler::{
     compile::LLVMCompiler,
     parser::expr_parser,
     typeinfer::TypeInfer,
+    wasm_compile::WasmCompiler,
 };
 use structopt::StructOpt;
 
@@ -36,6 +37,9 @@ struct Opt {
     #[structopt(short, long)]
     llvm: bool,
 
+    #[structopt(short, long)]
+    wasm: bool,
+
     program: String,
 }
 
@@ -48,6 +52,7 @@ fn main() {
         closure,
         hoist,
         llvm,
+        wasm,
         program,
     } = Opt::from_args();
     let ast = expr_parser::expr(&program).unwrap();
@@ -89,6 +94,12 @@ fn main() {
     anfconverter.hoisting(anfs, &mut hoisted_anfs);
     if hoist {
         println!("hoisted ANF:\n{}\n", &hoisted_anfs);
+    }
+    if wasm {
+        let mut wasm_compiler = WasmCompiler::new();
+        wasm_compiler.compile(hoisted_anfs);
+        println!("{}", wasm_compiler.program);
+        return;
     }
     let context = Context::create();
     let builder = context.create_builder();

@@ -17,7 +17,7 @@ pub enum Operator {
     Div,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Variable {
     pub name: String,
     pub id: usize,

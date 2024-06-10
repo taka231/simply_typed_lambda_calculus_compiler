@@ -79,7 +79,7 @@ pub struct ANFs {
 }
 
 impl ANFs {
-    fn free_vars(&self, bound_vars: &mut HashSet<usize>) -> Vec<Variable> {
+    pub fn free_vars(&self, bound_vars: &mut HashSet<usize>) -> Vec<Variable> {
         let mut free_vars = Vec::new();
         for anf in &self.anfs {
             match anf {
