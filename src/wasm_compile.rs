@@ -119,12 +119,16 @@ impl WasmCompiler {
             }
             ANF::Tuple(var, tuple) => {
                 for (i, v) in tuple.iter().enumerate() {
-                    self.append_line("i32.const 0");
+                    self.append_line("global.get $stack_pointer");
                     self.compile_value(v);
                     self.append_line(&format!("i32.store offset={}", i * 4));
                 }
                 self.append_line("global.get $stack_pointer");
                 self.append_line(&format!("local.set ${var}"));
+                self.append_line("global.get $stack_pointer");
+                self.append_line(&format!("i32.const {}", tuple.len() * 4));
+                self.append_line("i32.add");
+                self.append_line("global.set $stack_pointer");
             }
             ANF::Project(var, tuple, index) => {
                 self.append_line(&format!("local.get ${tuple}"));
